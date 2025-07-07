@@ -1,8 +1,8 @@
 import torch
 import torch.nn.functional as F
 from tqdm import tqdm
-from attacks import gen_perturbed_image
-from utils import get_data_min_max
+from src.attacks import gen_perturbed_image
+from src.utils import get_data_min_max
 import numpy as np
 
 def evaluate_model(

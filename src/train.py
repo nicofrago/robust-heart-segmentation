@@ -9,11 +9,11 @@ from tqdm import tqdm
 
 import torch
 import random
-from torchvision.transforms import functional as TF  # Correct import
+from torchvision.transforms import functional as TF  
 
 from tqdm import tqdm
-from attacks import gen_perturbed_image
-from utils import get_data_min_max
+from src.attacks import gen_perturbed_image
+from src.utils import get_data_min_max
 
 
 # Configuration
