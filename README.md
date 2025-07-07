@@ -1,4 +1,4 @@
-# robust-heart-segmentation
+# Robust-heart-segmentation
 
 Robust segmentation of cardiac structures from CT images is
 essential for accurate diagnosis and treatment planning in cardiovascular
@@ -19,6 +19,29 @@ hancing the trustworthiness of medical segmentation models and suggest
 that transformer-based architectures benefit the most from this strategy
 in adversarial settings, and offer practical training techniques to improve
 the reliability of segmentation models in real-world clinical scenarios.
+
+# Installation
+Clone the repository
+```
+git clone https://github.com/nicofrago/robust-heart-segmentation.git
+cd robust-heart-segmentation
+```
+
+Create and activate a virtual environment (optional but recommended)
+```
+python3 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
+
+Install dependencies
+```
+pip install -r requirements.txt
+```
+
+# Usage 
+
+Follow [Demo](notebooks/demo.ipynb)
+
 
 # Results
 
