@@ -104,7 +104,9 @@ class CombinedLoss(nn.Module):
         return self.ce_weight * ce_loss + self.dice_weight * dice_loss
 
 def compute_dice_score(probs, labels, num_classes):
-    targets_one_hot = F.one_hot(labels, num_classes=num_classes).permute(0, 3, 1, 2).float()
+    targets_one_hot = F.one_hot(
+        labels, num_classes=num_classes
+    ).permute(0, 3, 1, 2).float()
     dims = (0, 2, 3)
     intersection = torch.sum(probs * targets_one_hot, dims)
     cardinality = torch.sum(probs + targets_one_hot, dims)
@@ -140,11 +142,20 @@ def train(
             if random.random() < p_adversial:
                 clean_scans = scans[:b//2, :, :, :].clone()
                 epsilon = max_epsilon * random.random()
-                # scans_perturbed = gen_perturbed_image(scans[:b//2, :, :, :], masks[:b//2, :, :], loss_function, model, minv, maxv, epsilon=epsilon)
-                # adversarial = random.choice(['FSGM', 'DAG'])
                 adversarial = 'DAG'
                 adv_iterations = 5
-                scans_perturbed = gen_perturbed_image(scans[:b//2, :, :, :], masks[:b//2, :, :], loss_function, model, minv, maxv, method=adversarial, epsilon=epsilon, num_classes=NUM_CLASSES, iterations=adv_iterations)
+                scans_perturbed = gen_perturbed_image(
+                    scans[:b//2, :, :, :], 
+                    masks[:b//2, :, :], 
+                    loss_function, 
+                    model, 
+                    minv, 
+                    maxv, 
+                    method=adversarial, 
+                    epsilon=epsilon, 
+                    num_classes=NUM_CLASSES, 
+                    iterations=adv_iterations
+                )
                 scans[:b//2, :, :, :] = scans_perturbed
                 adv = True
 
@@ -186,7 +197,9 @@ def train(
                 val_loss += loss_function(outputs, masks).item() * scans.size(0)
 
                 probs = F.softmax(outputs, dim=1)
-                encoded_masks = F.one_hot(masks, num_classes=num_classes).permute(0, 3, 1, 2).float()
+                encoded_masks = F.one_hot(
+                    masks, num_classes=num_classes
+                ).permute(0, 3, 1, 2).float()
 
                 dims = (0, 2, 3)
                 intersection = torch.sum(probs * encoded_masks, dims)
@@ -198,7 +211,11 @@ def train(
         val_metric = metric_total / len(valid_data)
 
         print(f'Epoch {epoch+1}/{epochs}')
-        print(f'Training Loss: {epoch_loss:.4f} | Validation Loss: {val_loss:.4f} | Validation Metric: {val_metric:.4f}')
+        print(
+            f"Training Loss: {epoch_loss:.4f} | "
+            f"Validation Loss: {val_loss:.4f} | "
+            f"Validation Metric: {val_metric:.4f}"
+        )
         print('-'*40)
 
     model.eval()
@@ -230,6 +247,12 @@ if __name__ == "__main__":
     valid_data = MedicalScanDataset(f'{data_dir}/ct_256/val/npz/')
     test_data = MedicalScanDataset(f'{data_dir}/ct_256/test/npz/')
 
-    train_loader = DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True, num_workers=0)
-    valid_loader = DataLoader(valid_data, batch_size=BATCH_SIZE, shuffle=False, num_workers=0)
-    test_loader = DataLoader(test_data, batch_size=BATCH_SIZE, shuffle=False, num_workers=0)
+    train_loader = DataLoader(
+        train_data, batch_size=BATCH_SIZE, shuffle=True, num_workers=0
+    )
+    valid_loader = DataLoader(
+        valid_data, batch_size=BATCH_SIZE, shuffle=False, num_workers=0
+    )
+    test_loader = DataLoader(
+        test_data, batch_size=BATCH_SIZE, shuffle=False, num_workers=0
+    )
