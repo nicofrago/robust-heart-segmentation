@@ -1,37 +1,80 @@
 import torch
 import torch.nn.functional as F
 
+
 def gen_perturbed_image(
-        im,
-        lb,
-        loss_function,
-        model,
-        minv,
-        maxv,
-        method='FSGM',
-        epsilon=0.003,
-        num_classes=8,
-        iterations=3
+        im: torch.Tensor,
+        lb: torch.Tensor,
+        loss_function: torch.nn.Module,
+        model: torch.nn.Module,
+        minv: float,
+        maxv: float,
+        method: str = 'FSGM',
+        epsilon: float = 0.003,
+        num_classes: int = 8,
+        iterations: int = 3,
 ):
+    """
+    Generates a perturbed image based on the specified method.
+
+    Args:
+        im (torch.Tensor): The input image tensor.
+        lb (torch.Tensor): The label tensor.
+        loss_function (torch.nn.Module): The loss function used for optimization.
+        model (torch.nn.Module): The neural network model.
+        minv (float): The minimum pixel value.
+        maxv (float): The maximum pixel value.
+        method (str, optional): The method to generate the perturbed 
+        image ('FSGM', 'PGD', 'DAG'). Defaults to 'FSGM'.
+        epsilon (float, optional): The epsilon value for perturbation. Defaults to 0.003.
+        num_classes (int, optional): The number of classes. Defaults to 8.
+        iterations (int, optional): The number of iterations for optimization. 
+        Defaults to 3.
+
+    Returns:
+        torch.Tensor: The perturbed image tensor.
+    """
     if method == 'FSGM':
         return FSGM(im, lb, loss_function, model, minv, maxv, epsilon=epsilon)
     elif method == 'PGD':
-        return PGD(im, lb, loss_function, model, minv, maxv, epsilon=epsilon, iterations=iterations)
+        return PGD(
+            im, lb, loss_function, model, minv, maxv, 
+            epsilon=epsilon, iterations=iterations
+        )
     elif method == 'DAG':
-        return DAG(im, lb, num_classes, model, minv, maxv, epsilon=epsilon, iterations=iterations)
+        return DAG(
+            im, lb, num_classes, model, minv, maxv, 
+            epsilon=epsilon, iterations=iterations
+        )
     else:
         raise ValueError(f"Unknown method: {method}. Use 'FSGM' or 'PGD' or 'DAG'.")
     
 
 def FSGM(
-        im,
-        lb,
-        loss_function,
-        model,
-        minv,
-        maxv,
-        epsilon=0.003
+        im: torch.Tensor,
+        lb: torch.Tensor,
+        loss_function: torch.nn.Module,
+        model: torch.nn.Module,
+        minv: float,
+        maxv: float,
+        epsilon: float = 0.003,
 ):
+    """
+    Performs Fast Sign Gradient Method (FSGM) to generate a perturbed image 
+    for adversarial attacks.
+
+    Args:
+        im (torch.Tensor): The input image tensor.
+        lb (torch.Tensor): The label tensor.
+        loss_function (torch.nn.Module): The loss function used for optimization.
+        model (torch.nn.Module): The neural network model.
+        minv (float): The minimum pixel value.
+        maxv (float): The maximum pixel value.
+        epsilon (float, optional): The epsilon value for perturbation. Defaults to 0.003.
+
+    Returns:
+        torch.Tensor: The perturbed image tensor.
+    """
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     minv = torch.tensor(minv).to(device)
     maxv = torch.tensor(maxv).to(device)
@@ -53,21 +96,39 @@ def FSGM(
         perturbed_image = im + perturbation
 
         # Ensure the perturbed image is within the valid range
-        perturbed_image = torch.maximum(torch.minimum(perturbed_image, im + epsilon), im - epsilon)
+        perturbed_image = torch.maximum(
+            torch.minimum(perturbed_image, im + epsilon), im - epsilon
+        )
         perturbed_image = torch.clamp(perturbed_image, minv, maxv)
 
     return perturbed_image
 
 def PGD(
-    im,
-    lb,
-    loss_function,
-    model,
-    minv,
-    maxv,
-    epsilon=0.003,
-    iterations=3
+    im: torch.Tensor,
+    lb: torch.Tensor,
+    loss_function: torch.nn.Module,
+    model: torch.nn.Module,
+    minv: float,
+    maxv: float,
+    epsilon:float = 0.003,
+    iterations:int = 3,
 ):
+    """
+    Performs Projected Gradient Descent (PGD) to generate an adversarial perturbed image.
+
+    Args:
+        im: The input image tensor.
+        lb: The label tensor.
+        loss_function: The loss function used for optimization.
+        model: The neural network model.
+        minv: The minimum pixel value.
+        maxv: The maximum pixel value.
+        epsilon: The epsilon value for perturbation (default is 0.003).
+        iterations: The number of iterations for optimization (default is 3).
+
+    Returns:
+        The perturbed image tensor.
+    """
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     minv = torch.tensor(minv).to(device)
     maxv = torch.tensor(maxv).to(device)
@@ -75,8 +136,12 @@ def PGD(
     alpha = epsilon / iterations
 
     # initial perturbation
-    perturbed_image = im.clone().detach() + torch.empty_like(im).uniform_(-epsilon, epsilon)
-    perturbed_image = torch.maximum(torch.minimum(perturbed_image, im + epsilon), im - epsilon) # same than a clamp
+    perturbed_image = im.clone().detach() + torch.empty_like(im).uniform_(
+        -epsilon, epsilon
+    )
+    perturbed_image = torch.maximum(
+        torch.minimum(perturbed_image, im + epsilon), im - epsilon
+    ) # same than a clamp
     perturbed_image = torch.clamp(perturbed_image, minv, maxv)
     perturbed_image.requires_grad_()
 
@@ -90,7 +155,9 @@ def PGD(
         with torch.no_grad():
             perturbation = alpha * torch.sign(perturbed_image.grad)
             perturbed_image+= perturbation
-            perturbed_image = torch.maximum(torch.minimum(perturbed_image, im + epsilon), im - epsilon) # same than a clamp
+            perturbed_image = torch.maximum(
+                torch.minimum(perturbed_image, im + epsilon), im - epsilon
+            ) # same than a clamp
             perturbed_image = torch.clamp(perturbed_image, minv, maxv)
 
         perturbed_image = perturbed_image.detach().requires_grad_()
@@ -98,15 +165,32 @@ def PGD(
     return perturbed_image
 
 def DAG(
-    im,
-    lb,
-    num_classes,
-    model,
-    minv,
-    maxv,
-    epsilon=0.1,
-    iterations=5
+    im: torch.Tensor,
+    lb: torch.Tensor,
+    num_classes: int,
+    model: torch.nn.Module,
+    minv: float,
+    maxv: float,
+    epsilon: float = 0.1,
+    iterations: int = 5,
 ):
+    """
+    A function that performs the Directed Acyclic Graph (DAG) attack 
+    to generate an adversarial example.
+    
+    Args:
+        im: The input image tensor.
+        lb: The label tensor.
+        num_classes: The number of classes.
+        model: The neural network model.
+        minv: The minimum pixel value.
+        maxv: The maximum pixel value.
+        epsilon: The epsilon value for perturbation (default is 0.1).
+        iterations: The number of iterations for optimization (default is 5).
+        
+    Returns:
+        torch.Tensor: The perturbed image tensor as the result of the DAG attack.
+    """
     # Compute min and max values for the dataset
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     minv = torch.tensor(minv).to(device)
